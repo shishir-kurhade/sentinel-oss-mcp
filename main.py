@@ -3,7 +3,7 @@
 import os
 from mcp.server.fastmcp import FastMCP
 from sentinel.defense import WaterfallDefense
-from sentinel.constants import BANKING_SAFETY_CONSTITUTION, RED_TEAM_INSTRUCTION
+from sentinel.constants import RED_TEAM_INSTRUCTION
 from sentinel.models import GeminiClient
 
 # Initialize FastMCP server
@@ -31,10 +31,10 @@ async def generate_attack(category: str, style: str = "Standard") -> str:
     attack = await red_team_model.generate(query, system_instruction=RED_TEAM_INSTRUCTION)
     return attack
 
-@mcp.resource("safety://constitution")
-def get_constitution() -> str:
-    """Returns the banking safety constitution."""
-    return BANKING_SAFETY_CONSTITUTION
+@mcp.resource("safety://constitution/{name}")
+def get_constitution(name: str) -> str:
+    """Returns the requested safety constitution (e.g., 'banking', 'telecom')."""
+    return defense.constitutions.get(name, "Constitution not found.")
 
 @mcp.prompt()
 def analyze_vulnerability(category: str) -> str:

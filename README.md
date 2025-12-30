@@ -1,43 +1,45 @@
-# Sentinel MCP Server
+# Sentinel MCP - AI Security Proxy
 
-An independent Model Context Protocol (MCP) server for the Sentinel-OSS security framework.
+Sentinel is a standalone Model Context Protocol (MCP) server that provides a tiered "Waterfall Defense" for AI agents.
 
-## Features
-- **Waterfall Defense Tool**: Multilayered safety auditing (Cache -> Tiny Guard -> Expert Audit).
-- **Red Team Attack Generator**: Tool for generating sophisticated adversarial prompts.
-- **Safety Resources**: Direct access to the Banking Safety Constitution.
+## Project Structure
 
-## Installation
+- `main.py`: MCP Server entry point.
+- `sentinel/`: Core logic package.
+    - `defense.py`: Waterfall Defense orchestration (Cache -> Tiny Guard -> Expert Audit).
+    - `constitutions/`: **NEW!** Add or or edit `.md` files here to define safety rules.
+    - `models.py`: Gemini API client (supports direct and Vertex AI).
+- `tests/`: Comprehensive test suite for all layers.
 
-```bash
-pip install mcp fastmcp google-genai python-dotenv
-```
+## For Developers: Adding Constitutions
 
-## Configuration
+To add a new safety domain (e.g., 'healthcare'):
+1. Create `sentinel/constitutions/healthcare.md`.
+2. Write your safety rules in plain text/markdown.
+3. Use the `check_safety` tool with `constitution="healthcare"`.
+   - The server dynamically loads new files—no restart or code changes required!
 
-Set your Gemini API key in your environment or a `.env` file:
-```bash
-GOOGLE_API_KEY=your_api_key_here
-```
+## Installation & Usage
 
-## Usage
+1. **Setup Environment**:
+   ```bash
+   export GOOGLE_API_KEY="your-key"
+   # Or for Vertex AI
+   export GOOGLE_GENAI_USE_VERTEXAI=True
+   export GOOGLE_CLOUD_PROJECT="your-project"
+   ```
 
-Run the server with:
-```bash
-python main.py
-```
+2. **Run Server Local**:
+   ```bash
+   python main.py
+   ```
 
-To use in your IDE (Windsurf/Cursor), add it to your `config.json`:
-```json
-{
-  "mcpServers": {
-    "sentinel": {
-      "command": "python",
-      "args": ["/path/to/sentinel-mcp/main.py"],
-      "env": {
-        "GOOGLE_API_KEY": "your_api_key"
+3. **Run Tests**:
+   ```bash
+   # From the root directory
+   python tests/test_sentinel_mcp.py
+   ```
       }
     }
   }
 }
-```

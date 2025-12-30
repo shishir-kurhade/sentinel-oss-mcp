@@ -1,20 +1,32 @@
 # sentinel/defense.py
 
+import os
 import json
 import asyncio
 import unicodedata
 import re
-from .constants import SEMANTIC_CACHE, BANKING_SAFETY_CONSTITUTION, TELECOM_SAFETY_CONSTITUTION
+from .constants import SEMANTIC_CACHE
 from .models import GeminiClient
 
 class WaterfallDefense:
     def __init__(self):
         self.tiny_guard = GeminiClient("gemini-2.5-flash-lite")
         self.model_armor = GeminiClient("gemini-2.5-flash") # Using Flash as "Expert" simulation
-        self.constitutions = {
-            "banking": BANKING_SAFETY_CONSTITUTION,
-            "telecom": TELECOM_SAFETY_CONSTITUTION
-        }
+        self.constitutions_dir = os.path.join(os.path.dirname(__file__), "constitutions")
+        self._load_constitutions()
+
+    def _load_constitutions(self):
+        """Dynamically load all .md files from the constitutions directory."""
+        self.constitutions = {}
+        if not os.path.exists(self.constitutions_dir):
+            return
+            
+        for filename in os.listdir(self.constitutions_dir):
+            if filename.endswith(".md"):
+                name = filename[:-3]
+                path = os.path.join(self.constitutions_dir, filename)
+                with open(path, "r") as f:
+                    self.constitutions[name] = f.read()
 
     def _sanitize_input(self, text: str) -> str:
         """
@@ -34,11 +46,17 @@ class WaterfallDefense:
         return text.strip()
 
     async def check_prompt(self, prompt: str, constitution_name: str = "banking") -> dict:
+        # Re-load to ensure we have latest and greatest
+        self._load_constitutions()
+        
         # Sanitize input first
         sanitized_prompt = self._sanitize_input(prompt)
         norm_prompt = sanitized_prompt.lower()
         
-        constitution = self.constitutions.get(constitution_name, BANKING_SAFETY_CONSTITUTION)
+        constitution = self.constitutions.get(constitution_name)
+        if not constitution:
+            # Fallback to banking, then to a generic safe default
+            constitution = self.constitutions.get("banking", "You are a helpful and safe AI assistant.")
         
         # Layer 1: Cache
         if norm_prompt in SEMANTIC_CACHE:
