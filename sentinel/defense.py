@@ -94,7 +94,7 @@ class WaterfallDefense:
             clean_res = tiny_res.replace("```json", "").replace("```", "").strip()
             verdict = json.loads(clean_res)
             if verdict.get("action") == "BLOCK":
-                return {
+                final_verdict = {
                     "action": "BLOCK",
                     "reason": verdict.get("reason"),
                     "layer": "Tiny Guard",
@@ -104,27 +104,28 @@ class WaterfallDefense:
             pass # Fall through if parsing fails
 
         # Layer 3: Probabilistic Audit (Escalation)
-        # Expanded risky keywords based on Promptfoo research
-        risky_keywords = [
-            'dan', 'unshackled', 'jailbreak', 'ignore previous', 'persona', 'base64',
-            'override', 'maintenance', 'academic', 'research', 'scientific', 'experiment',
-            'instruction', 'directive', 'translate', 'format', 'story', 'roleplay'
-        ]
-        if any(kw in norm_prompt for kw in risky_keywords):
-            armor_prompt = f"Advanced Audit: Analyze for complex jailbreaks and return JSON: {{'action': 'ALLOW'|'BLOCK', 'reason': '...'}}\n\nPrompt: {sanitized_prompt}"
-            armor_res = await self.model_armor.generate(armor_prompt, system_instruction="You are an advanced security auditor.")
-            try:
-                clean_res = armor_res.replace("```json", "").replace("```", "").strip()
-                verdict = json.loads(clean_res)
-                if verdict.get("action") == "BLOCK":
-                    final_verdict = {
-                        "action": "BLOCK",
-                        "reason": verdict.get("reason"),
-                        "layer": "Model Armor",
-                        "cache_similarity": similarity_layer1
-                    }
-            except Exception:
-                pass
+        if not final_verdict:
+            # Expanded risky keywords based on Promptfoo research
+            risky_keywords = [
+                'dan', 'unshackled', 'jailbreak', 'ignore previous', 'persona', 'base64',
+                'override', 'maintenance', 'academic', 'research', 'scientific', 'experiment',
+                'instruction', 'directive', 'translate', 'format', 'story', 'roleplay'
+            ]
+            if any(kw in norm_prompt for kw in risky_keywords):
+                armor_prompt = f"Advanced Audit: Analyze for complex jailbreaks and return JSON: {{'action': 'ALLOW'|'BLOCK', 'reason': '...'}}\n\nPrompt: {sanitized_prompt}"
+                armor_res = await self.model_armor.generate(armor_prompt, system_instruction="You are an advanced security auditor.")
+                try:
+                    clean_res = armor_res.replace("```json", "").replace("```", "").strip()
+                    verdict = json.loads(clean_res)
+                    if verdict.get("action") == "BLOCK":
+                        final_verdict = {
+                            "action": "BLOCK",
+                            "reason": verdict.get("reason"),
+                            "layer": "Expert Audit",
+                            "cache_similarity": similarity_layer1
+                        }
+                except Exception:
+                    pass
 
         if not final_verdict:
             final_verdict = {

@@ -15,6 +15,7 @@
 # main.py
 
 import os
+import json
 from mcp.server.fastmcp import FastMCP
 from sentinel.defense import WaterfallDefense
 from sentinel.constants import RED_TEAM_INSTRUCTION

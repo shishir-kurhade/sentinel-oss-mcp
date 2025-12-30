@@ -84,9 +84,18 @@ To add a new safety domain:
 
 Sentinel is open-source and designed to be a lightweight addition for building safer AI applications.
 
-### 🚀 Running the Security HUD Dashboard
+### 🛡️ Security HUD: Real-Time Observability
 Sentinel includes a premium **Security HUD** built with Streamlit to visualize your agent's safety performance in real-time.
 
+![Sentinel Security HUD](assets/dashboard.png)
+
+#### What the HUD Covers:
+- **Total Audits & Block Rate**: Track the overall volume and effectiveness of your security layers.
+- **Latency Monitoring**: Visualize the performance impact of each waterfall stage in sub-milliseconds.
+- **Interaction History**: A live-updating trace of all prompts, their final verdicts, and the specific layer (Cache, Tiny Guard, or Expert) that handled the check.
+- **Waterfall Health**: Real-time status indicators for all active security domains and defensive layers.
+
+### 🚀 Running the Dashboard
 ```bash
 # From the sentinel-mcp directory
 PYTHONPATH=. streamlit run sentinel/dashboard.py
