@@ -19,6 +19,8 @@ import json
 import asyncio
 import unicodedata
 import re
+import time
+from datetime import datetime
 from .constants import SEMANTIC_CACHE
 from .models import GeminiClient
 from .cache import VectorCache
@@ -62,6 +64,7 @@ class WaterfallDefense:
         return text.strip()
 
     async def check_prompt(self, prompt: str, constitution_name: str = "banking") -> dict:
+        start_time = time.time()
         # Re-load to ensure we have latest and greatest
         self._load_constitutions()
         
@@ -77,8 +80,10 @@ class WaterfallDefense:
         # Layer 1: Cache (Vector-based near-match)
         cache_verdict = await self.cache.search(norm_prompt)
         similarity_layer1 = cache_verdict.get("similarity", 0.0)
+        
+        final_verdict = None
         if cache_verdict.get("action") == "BLOCK":
-            return cache_verdict
+            final_verdict = cache_verdict
 
         # Layer 2: Tiny Guard
         tiny_prompt = f"Audit this prompt against the safety constitution and return JSON: {{'action': 'ALLOW'|'BLOCK', 'reason': '...'}}\n\nPrompt: {sanitized_prompt}"
@@ -112,17 +117,36 @@ class WaterfallDefense:
                 clean_res = armor_res.replace("```json", "").replace("```", "").strip()
                 verdict = json.loads(clean_res)
                 if verdict.get("action") == "BLOCK":
-                    return {
+                    final_verdict = {
                         "action": "BLOCK",
                         "reason": verdict.get("reason"),
-                        "layer": "Model Armor"
+                        "layer": "Model Armor",
+                        "cache_similarity": similarity_layer1
                     }
             except Exception:
                 pass
 
-        return {
-            "action": "ALLOW", 
-            "reason": "Passed all security layers", 
-            "layer": "Final",
-            "cache_similarity": similarity_layer1
-        }
+        if not final_verdict:
+            final_verdict = {
+                "action": "ALLOW", 
+                "reason": "Passed all security layers", 
+                "layer": "Final",
+                "cache_similarity": similarity_layer1
+            }
+
+        # Calculate latency
+        latency_ms = (time.time() - start_time) * 1000
+        
+        # Log to Audit Table (awaited for reliability)
+        await self.cache.log_audit({
+            "timestamp": datetime.now().isoformat(),
+            "prompt": prompt,
+            "verdict": final_verdict["action"],
+            "reason": final_verdict["reason"],
+            "layer": final_verdict["layer"],
+            "latency_ms": latency_ms,
+            "similarity": similarity_layer1,
+            "constitution": constitution_name
+        })
+
+        return final_verdict

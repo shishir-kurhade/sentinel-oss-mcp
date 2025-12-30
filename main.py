@@ -25,6 +25,16 @@ mcp = FastMCP("Sentinel")
 defense = WaterfallDefense()
 red_team_model = GeminiClient("gemini-2.5-flash")
 
+@mcp.resource("sentinel://analytics/summary")
+def get_analytics_summary() -> str:
+    """Returns a summary of safety interactions and block rates."""
+    return json.dumps(defense.cache.get_analytics_summary(), indent=2)
+
+@mcp.resource("sentinel://analytics/logs")
+def get_audit_logs() -> str:
+    """Returns the most recent security audit logs."""
+    return json.dumps(defense.cache.get_recent_logs(limit=20), indent=2)
+
 @mcp.tool()
 async def check_safety(prompt: str, constitution: str = "banking") -> str:
     """

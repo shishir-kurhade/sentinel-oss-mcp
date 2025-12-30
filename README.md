@@ -47,6 +47,13 @@ A built-in utility is included to generate adversarial prompts for testing. It c
 - `tests/`:
     - `integration_test.py`: Full system verification.
     - `adversarial_test.py`: Red teaming and attack simulation.
+    - `test_audit_logging.py`: Verification of the logging backend.
+
+### Analytics Resources (MCP)
+
+Sentinel exposes two built-in MCP resources for system introspection:
+- `sentinel://analytics/summary`: Aggregate stats (Total Audits, Block Rate, Avg Latency).
+- `sentinel://analytics/logs`: A stream of the most recent audit interactions.
 
 ### Adding New Domains
 
@@ -76,6 +83,14 @@ To add a new safety domain:
    ```
 
 Sentinel is open-source and designed to be a lightweight addition for building safer AI applications.
+
+### 🚀 Running the Security HUD Dashboard
+Sentinel includes a premium **Security HUD** built with Streamlit to visualize your agent's safety performance in real-time.
+
+```bash
+# From the sentinel-mcp directory
+PYTHONPATH=. streamlit run sentinel/dashboard.py
+```
 
 ## License & Attribution
 
