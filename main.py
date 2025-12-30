@@ -12,17 +12,20 @@ defense = WaterfallDefense()
 red_team_model = GeminiClient("gemini-2.5-flash")
 
 @mcp.tool()
-async def check_safety(prompt: str) -> str:
+async def check_safety(prompt: str, constitution: str = "banking") -> str:
     """
     Check if a prompt is safe using the Waterfall Defense architecture.
+    'constitution' can be 'banking' or 'telecom'.
     """
-    result = await defense.check_prompt(prompt)
+    result = await defense.check_prompt(prompt, constitution_name=constitution)
     return f"Verdict: {result['action']}\nReason: {result['reason']}\nLayer: {result['layer']}"
 
 @mcp.tool()
 async def generate_attack(category: str, style: str = "Standard") -> str:
     """
     Generate an adversarial prompt for a given risk category and style.
+    Styles include: 'Standard', 'Many-Shot', 'DAN', 'Token Splitting', 
+    'Context Framing', 'Academic', 'Emotional Manipulation'.
     """
     query = f"Category: {category}\nStyle: {style}"
     attack = await red_team_model.generate(query, system_instruction=RED_TEAM_INSTRUCTION)
