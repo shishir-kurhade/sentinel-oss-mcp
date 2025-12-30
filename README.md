@@ -1,10 +1,10 @@
 # Sentinel MCP - AI Security Proxy
 
-As AI agents become a part of our daily work, we face a new challenge: how do we keep them safe without breaking the bank or slowing them down? **Sentinel MCP** is a standalone security proxy designed to defend AI systems against sophisticated attacks while keeping costs low.
+As AI agents become a part of daily workflows, maintaining safety without increasing latency or cost is a key challenge. **Sentinel MCP** is a standalone security proxy designed to defend AI systems against sophisticated attacks while prioritizing resource efficiency.
 
 ## The "Waterfall" Defense
 
-Most security filters are either too simple or too expensive. Sentinel uses a "Waterfall" approach to get the best of both worlds:
+Maintaining robust security usually requires a trade-off between speed and cost. Sentinel uses a "Waterfall" approach to balance these needs:
 
 ```mermaid
 graph TD
@@ -19,21 +19,21 @@ graph TD
     H -- Allow --> G
 ```
 
-1.  **Semantic Cache**: If we’ve seen an attack before, we block it instantly and for free. 
+1.  **Semantic Cache**: Known attacks are blocked instantly at zero cost.
     > [!NOTE] 
-    > The current implementation uses a hardcoded dictionary for demonstration. However, this layer is designed to be easily replaced with a local, low-latency vector database (e.g., ChromaDB or LanceDB) for high-performance similarity matching.
-2.  **Tiny Guard**: We use a lightweight model (Gemini Flash Lite) to check the prompt against specific industry rules (like Banking or Healthcare).
-3.  **Expert Audit**: For complex, suspicious prompts, we escalate to an "Expert" audit that can see through camouflage and roleplay.
+    > The current implementation uses a hardcoded dictionary for demonstration. This layer can be replaced with a local vector database (e.g., ChromaDB or LanceDB) for greater scale.
+2.  **Tiny Guard**: A lightweight model (Gemini Flash Lite) audits the prompt against specific industry rules (like Banking or Healthcare).
+3.  **Expert Audit**: Suspicious prompts are escalated to an advanced audit that analyzes for complex jailbreaks, roleplay, and camouflage.
 
-This tiered system ensures that 90% of threats are stopped at the cheapest possible layer, saving expensive compute for the truly difficult cases.
+This tiered system ensures most threats are caught at the earliest possible layer, reserving higher compute for the most difficult cases.
 
-### Security for Every Industry
+### Industry Guardrails
 
-Sentinel isn't just for one use case. With our new **Dynamic Constitutions**, you can secure your AI for almost anything. Whether you're in **Healthcare** (protecting patient data), **Retail** (preventing pricing hallucinations), or **Telecom** (stopping SIM-swap attacks), you can add your own safety rules just by dropping a Markdown file into a folder.
+Sentinel supports multiple vertical domains via **Dynamic Constitutions**. Security rules can be added or refined for any industry—such as **Healthcare** (PHI privacy), **Retail** (pricing integrity), or **Telecom** (SIM-swap prevention)—by adding a Markdown file to the definitions folder.
 
-### Stress-Tested by Design
+### Integrated Red Teaming
 
-We didn't just build a shield; we built a sword. Sentinel includes a built-in **Red Team** tool that generates advanced jailbreak attempts—like "Token Splitting" or "Emotional Manipulation"—to make sure your defenses actually work under pressure.
+A built-in utility is included to generate adversarial prompts for testing. It can simulate various attack styles, such as "Token Splitting" or "Emotional Manipulation," ensuring the defensive layers are consistently validated against new threats.
 
 ---
 
@@ -43,20 +43,19 @@ We didn't just build a shield; we built a sword. Sentinel includes a built-in **
 
 - `main.py`: MCP Server entry point.
 - `sentinel/`: Core logic package.
-    - `defense.py`: Waterfall Defense orchestration (Cache -> Tiny Guard -> Expert Audit).
-    - `constitutions/`: Add or edit `.md` files here to define safety rules.
+    - `defense.py`: Waterfall Defense orchestration.
+    - `constitutions/`: Markdown definitions for safety protocols.
     - `models.py`: Gemini API client (supports direct and Vertex AI).
-- `tests/`: Comprehensive test suite for all layers.
+- `tests/`:
     - `integration_test.py`: Full system verification.
     - `adversarial_test.py`: Red teaming and attack simulation.
 
-### For Developers: Adding Constitutions
+### Adding New Domains
 
-To add a new safety domain (e.g., 'healthcare'):
-1. Create `sentinel/constitutions/healthcare.md`.
-2. Write your safety rules in plain text/markdown.
-3. Use the `check_safety` tool with `constitution="healthcare"`.
-   - The server dynamically loads new files—no restart or code changes required!
+To add a new safety domain:
+1. Create a new file in `sentinel/constitutions/` (e.g., `healthcare.md`).
+2. Define the safety rules in plain text.
+3. The server will dynamically detect the new domain for use with the `check_safety` tool.
 
 ## Installation & Usage
 
@@ -75,8 +74,7 @@ To add a new safety domain (e.g., 'healthcare'):
 
 3. **Run Tests**:
    ```bash
-   # From the root directory
    PYTHONPATH=. python3 tests/integration_test.py
    ```
 
-Sentinel is open-source, developer-friendly, and ready to help you build safer AI. Check it out on [GitHub](https://github.com/shishir-kurhade/sentinel-oss-mcp)!
+Sentinel is open-source and designed to be a lightweight addition for building safer AI applications.
