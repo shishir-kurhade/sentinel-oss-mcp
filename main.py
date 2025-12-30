@@ -41,5 +41,13 @@ def analyze_vulnerability(category: str) -> str:
     """Template for auditing a specific vulnerability category."""
     return f"Audit the system for '{category}' vulnerabilities using the @Sentinel check_safety tool."
 
+@mcp.tool()
+async def add_to_cache(prompt: str, reason: str):
+    """
+    Manually add a malicious prompt to the semantic cache to block it and similar variations.
+    """
+    await defense.cache.add_prompt(prompt, reason)
+    return f"Successfully added malicious pattern to vector cache."
+
 if __name__ == "__main__":
     mcp.run()

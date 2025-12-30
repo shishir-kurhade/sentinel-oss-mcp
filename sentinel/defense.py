@@ -7,12 +7,14 @@ import unicodedata
 import re
 from .constants import SEMANTIC_CACHE
 from .models import GeminiClient
+from .cache import VectorCache
 
 class WaterfallDefense:
     def __init__(self):
         self.tiny_guard = GeminiClient("gemini-2.5-flash-lite")
         self.model_armor = GeminiClient("gemini-2.5-flash") # Using Flash as "Expert" simulation
         self.constitutions_dir = os.path.join(os.path.dirname(__file__), "constitutions")
+        self.cache = VectorCache(client=self.tiny_guard)
         self._load_constitutions()
 
     def _load_constitutions(self):
@@ -58,13 +60,11 @@ class WaterfallDefense:
             # Fallback to banking, then to a generic safe default
             constitution = self.constitutions.get("banking", "You are a helpful and safe AI assistant.")
         
-        # Layer 1: Cache
-        if norm_prompt in SEMANTIC_CACHE:
-            return {
-                "action": "BLOCK",
-                "reason": SEMANTIC_CACHE[norm_prompt]["reason"],
-                "layer": "Semantic Cache"
-            }
+        # Layer 1: Cache (Vector-based near-match)
+        cache_verdict = await self.cache.search(norm_prompt)
+        similarity_layer1 = cache_verdict.get("similarity", 0.0)
+        if cache_verdict.get("action") == "BLOCK":
+            return cache_verdict
 
         # Layer 2: Tiny Guard
         tiny_prompt = f"Audit this prompt against the safety constitution and return JSON: {{'action': 'ALLOW'|'BLOCK', 'reason': '...'}}\n\nPrompt: {sanitized_prompt}"
@@ -78,7 +78,8 @@ class WaterfallDefense:
                 return {
                     "action": "BLOCK",
                     "reason": verdict.get("reason"),
-                    "layer": "Tiny Guard"
+                    "layer": "Tiny Guard",
+                    "cache_similarity": similarity_layer1
                 }
         except Exception:
             pass # Fall through if parsing fails
@@ -105,4 +106,9 @@ class WaterfallDefense:
             except Exception:
                 pass
 
-        return {"action": "ALLOW", "reason": "Passed all security layers", "layer": "Final"}
+        return {
+            "action": "ALLOW", 
+            "reason": "Passed all security layers", 
+            "layer": "Final",
+            "cache_similarity": similarity_layer1
+        }

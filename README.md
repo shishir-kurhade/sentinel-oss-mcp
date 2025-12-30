@@ -19,9 +19,7 @@ graph TD
     H -- Allow --> G
 ```
 
-1.  **Semantic Cache**: Known attacks are blocked instantly at zero cost.
-    > [!NOTE] 
-    > The current implementation uses a hardcoded dictionary for demonstration. This layer can be replaced with a local vector database (e.g., ChromaDB or LanceDB) for greater scale.
+1.  **Semantic Cache**: Known attacks are blocked instantly at zero cost using a local **LanceDB** vector database. This allows for "Near-Match" detection, catching variations of previously blocked prompts.
 2.  **Tiny Guard**: A lightweight model (Gemini Flash Lite) audits the prompt against specific industry rules (like Banking or Healthcare).
 3.  **Expert Audit**: Suspicious prompts are escalated to an advanced audit that analyzes for complex jailbreaks, roleplay, and camouflage.
 

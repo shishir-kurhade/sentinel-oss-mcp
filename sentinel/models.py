@@ -35,3 +35,11 @@ class GeminiClient:
             config=config,
         )
         return response.text
+
+    async def embed(self, text: str) -> list[float]:
+        """Generates embeddings for the given text using text-embedding-004."""
+        res = await self.client.aio.models.embed_content(
+            model="text-embedding-004",
+            contents=text
+        )
+        return res.embeddings[0].values

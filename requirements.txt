@@ -2,3 +2,5 @@ mcp
 fastmcp
 google-genai
 python-dotenv
+lancedb
+pandas
