@@ -76,3 +76,13 @@ To add a new safety domain:
    ```
 
 Sentinel is open-source and designed to be a lightweight addition for building safer AI applications.
+
+## License & Attribution
+
+This project is licensed under the **Apache License 2.0**. 
+
+### Attribution
+If you use this project, please provide attribution to the original author. For any substantial redistribution or derivative works, please maintain the original copyright notice found in the `LICENSE` file.
+
+### Contributing
+Contributions are welcome! Please see [CONTRIBUTING.md](file:///Users/kurhades/Documents/LLMSecurityAgent/sentinel-mcp/CONTRIBUTING.md) for details on how to get involved.
