@@ -1,0 +1,46 @@
+name: Feature request
+description: Propose a focused capability or improvement
+title: "[Feature]: "
+labels: [enhancement, triage]
+body:
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched existing issues and the public-beta non-goals.
+          required: true
+        - label: This proposal contains no credentials, personal data, or private prompts.
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Describe the integration or security problem, not only a preferred solution.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Explain public contract, fail-safe behavior, and caller obligations.
+    validations:
+      required: true
+  - type: textarea
+    id: threat
+    attributes:
+      label: Threat-model and privacy impact
+      description: Identify new trust boundaries, stored data, network calls, permissions, or dependencies.
+    validations:
+      required: true
+  - type: textarea
+    id: tests
+    attributes:
+      label: Acceptance and evaluation cases
+      description: List harmful, benign, hard-negative, and failure scenarios where relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

@@ -1,0 +1,181 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUNBUFFERED: "1"
+  SENTINEL_OFFLINE: "1"
+  SENTINEL_GOOGLE_API_KEY: ""
+  SENTINEL_USE_VERTEX: "false"
+  GOOGLE_API_KEY: ""
+  GOOGLE_GENAI_USE_VERTEXAI: "false"
+
+jobs:
+  quality:
+    name: Lint and type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install development dependencies
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+      - name: Ruff lint
+        run: ruff check .
+      - name: Ruff formatting
+        run: ruff format --check .
+      - name: Mypy
+        run: mypy src/sentinel_oss
+
+  test:
+    name: Offline tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    env:
+      SENTINEL_DATA_DIR: ${{ runner.temp }}/sentinel
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install development dependencies
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+      - name: Run offline suite
+        run: >-
+          pytest -m "not live"
+          --cov=sentinel_oss
+          --cov-branch
+          --cov-report=term-missing
+          --cov-report=xml
+          --cov-fail-under=90
+      - name: Enforce decision-routing coverage
+        run: >-
+          pytest -m "not live"
+          tests/test_engine.py
+          tests/test_actions.py
+          tests/test_runtime.py
+          tests/test_security_regressions.py
+          --cov=sentinel_oss.engine
+          --cov-branch
+          --cov-report=term-missing
+          --cov-fail-under=95
+      - name: Upload coverage
+        if: matrix.python-version == '3.11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.xml
+          if-no-files-found: error
+
+  build:
+    name: Build and inspect distributions
+    needs: [quality, test]
+    runs-on: ubuntu-latest
+    env:
+      SENTINEL_DATA_DIR: ${{ runner.temp }}/sentinel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install build tools
+        run: python -m pip install --upgrade pip build twine
+      - name: Build wheel and source distribution
+        run: python -m build
+      - name: Check package metadata
+        run: python -m twine check dist/*
+      - name: Smoke-test the wheel without credentials
+        shell: bash
+        run: |
+          python -m venv /tmp/sentinel-wheel-venv
+          /tmp/sentinel-wheel-venv/bin/python -m pip install dist/*.whl
+          /tmp/sentinel-wheel-venv/bin/python -c "import sentinel_oss"
+          /tmp/sentinel-wheel-venv/bin/sentinel-oss --help
+          /tmp/sentinel-wheel-venv/bin/sentinel-oss-mcp --help
+          /tmp/sentinel-wheel-venv/bin/python tests/wheel_mcp_smoke.py
+          python -m venv /tmp/sentinel-sdist-venv
+          /tmp/sentinel-sdist-venv/bin/python -m pip install dist/*.tar.gz
+          /tmp/sentinel-sdist-venv/bin/python -c "import sentinel_oss"
+          /tmp/sentinel-sdist-venv/bin/sentinel-oss --help
+      - name: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: distributions
+          path: dist/
+          if-no-files-found: error
+
+  dependency-audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install package and auditor
+        run: >-
+          python -m pip install --upgrade pip &&
+          python -m pip install ".[gemini,vector,dashboard,dev]"
+      - name: Audit installed dependencies
+        shell: bash
+        run: |
+          python -m pip freeze --exclude sentinel-oss-mcp > "${RUNNER_TEMP}/sentinel-dependencies.txt"
+          python -m pip_audit --strict --desc --requirement "${RUNNER_TEMP}/sentinel-dependencies.txt"
+
+  source-security:
+    name: Source security scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install Bandit
+        run: python -m pip install "bandit>=1.8,<2"
+      - name: Scan Python source
+        run: bandit -q -lll -r src/sentinel_oss
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan repository history
+        shell: bash
+        run: |
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --volume "${GITHUB_WORKSPACE}:/repo" \
+            --workdir /repo \
+            ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
+            git --redact --verbose --log-opts=--all .
+      - name: Reject historical runtime data
+        shell: bash
+        run: |
+          if git rev-list --all --objects | awk '$2 ~ /^[.]sentinel_cache\// || $2 == "assets/dashboard.png" { found=1 } END { exit found ? 0 : 1 }'; then
+            echo "Sensitive prototype runtime data remains reachable from Git history." >&2
+            echo "Follow RELEASE.md and remove both forbidden paths from every ref." >&2
+            exit 1
+          fi

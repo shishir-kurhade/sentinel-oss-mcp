@@ -1,0 +1,135 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sentinel-oss-mcp"
+version = "0.1.0b1"
+description = "An auditable MCP guard layer for scanning exchanges and authorizing tool actions"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Shishir Kurhade" }]
+keywords = [
+  "ai-safety",
+  "mcp",
+  "model-context-protocol",
+  "prompt-injection",
+  "security",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Security",
+  "Typing :: Typed",
+]
+dependencies = [
+  "mcp>=1.12,<2",
+  "pydantic>=2.10,<3",
+]
+
+[project.optional-dependencies]
+gemini = [
+  "google-genai>=1,<2",
+]
+vector = [
+  "lancedb>=0.20,<1",
+  "pyarrow>=18,<24",
+]
+dashboard = [
+  "streamlit>=1.41,<2",
+]
+dev = [
+  "bandit>=1.8,<2",
+  "build>=1.2,<2",
+  "mypy>=1.14,<2",
+  "pip-audit>=2.7,<3",
+  "pytest>=9.0.3,<10",
+  "pytest-asyncio>=0.25,<2",
+  "pytest-cov>=6,<8",
+  "ruff>=0.9,<1",
+  "twine>=6,<7",
+]
+
+[project.scripts]
+sentinel-oss-mcp = "sentinel_oss.mcp_server:main"
+sentinel-oss = "sentinel_oss.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/shishir-kurhade/sentinel-oss-mcp"
+Documentation = "https://github.com/shishir-kurhade/sentinel-oss-mcp#readme"
+Issues = "https://github.com/shishir-kurhade/sentinel-oss-mcp/issues"
+Security = "https://github.com/shishir-kurhade/sentinel-oss-mcp/security/policy"
+Source = "https://github.com/shishir-kurhade/sentinel-oss-mcp"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+sentinel_oss = [
+  "eval_data/*.jsonl",
+  "eval_data/*.json",
+  "eval_data/*.md",
+  "py.typed",
+  "policy_packs/*.json",
+]
+
+[tool.pytest.ini_options]
+addopts = [
+  "--strict-config",
+  "--strict-markers",
+  "--showlocals",
+]
+asyncio_mode = "auto"
+pythonpath = ["."]
+testpaths = ["tests"]
+markers = [
+  "live: requires network access and provider credentials",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["sentinel_oss"]
+
+[tool.coverage.report]
+exclude_also = [
+  "if TYPE_CHECKING:",
+  "if __name__ == .__main__.:",
+  "raise NotImplementedError",
+]
+show_missing = true
+skip_covered = true
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]
+"tests/test_normalization.py" = ["RUF001"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+pretty = true
+packages = ["sentinel_oss"]
+mypy_path = "src"
+
+[[tool.mypy.overrides]]
+module = ["google", "google.*", "lancedb", "streamlit"]
+follow_imports = "skip"
+ignore_missing_imports = true

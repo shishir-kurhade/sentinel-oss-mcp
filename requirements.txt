@@ -1,8 +1,0 @@
-mcp
-fastmcp
-google-genai
-python-dotenv
-lancedb
-pandas
-streamlit
-pyarrow

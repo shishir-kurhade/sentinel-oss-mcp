@@ -1,0 +1,66 @@
+name: Bug report
+description: Report a reproducible, non-sensitive defect
+title: "[Bug]: "
+labels: [bug, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not report vulnerabilities, credentials, private prompts, or customer data here.
+        Use [private vulnerability reporting](../../security/advisories/new) instead.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched existing issues.
+          required: true
+        - label: This report contains only synthetic, public-safe data.
+          required: true
+        - label: This is not a suspected security vulnerability.
+          required: true
+  - type: input
+    id: version
+    attributes:
+      label: Sentinel version or commit
+      placeholder: 0.1.0b1 or commit SHA
+    validations:
+      required: true
+  - type: dropdown
+    id: python
+    attributes:
+      label: Python version
+      options: ["3.11", "3.12", "3.13"]
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, installation method, enabled extras, and provider/model IDs if relevant. Never include credentials.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Provide synthetic input, exact command or code, and any safe decision metadata.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional public-safe context
+      description: Include logs only after confirming they contain no sensitive content.

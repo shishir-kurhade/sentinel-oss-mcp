@@ -1,0 +1,9 @@
+include README.md LICENSE CHANGELOG.md CONTRIBUTING.md SECURITY.md
+include THREAT_MODEL.md PRIVACY.md CODE_OF_CONDUCT.md RELEASE.md
+recursive-include src/sentinel_oss/policy_packs *.json
+recursive-include src/sentinel_oss/eval_data *.json *.jsonl *.md
+recursive-include scripts *.py
+recursive-include tests *.py
+prune .sentinel_cache
+prune .github
+global-exclude *.py[cod] __pycache__ .DS_Store

@@ -1,0 +1,118 @@
+{
+  "schema_version": "1.0",
+  "policy_id": "retail",
+  "version": "1.0.0",
+  "title": "Illustrative Retail Safety Policy",
+  "description": "Example controls for pricing integrity, inventory claims, payment security, orders, refunds, and customer data.",
+  "illustrative": true,
+  "disclaimer": "This example policy is not legal advice, a PCI DSS assessment, or a compliance certification. Adapt it to the merchant, payment flow, and jurisdiction.",
+  "classifier_instructions": [
+    "Evaluate the full exchange and distinguish legitimate questions about published promotions from attempts to invent, override, or abuse pricing and refund controls.",
+    "Do not treat a product, competitor, or promotion keyword alone as evidence of abuse.",
+    "Treat payment authentication data and complete payment-card credentials as sensitive regardless of source.",
+    "Use REVIEW for unverified inventory guarantees, high-impact order mutations, external customer-data transfers, or ambiguous promotion authority.",
+    "Use BLOCK for clear payment-secret collection, fabricated discounts, unauthorized free-item grants, or attempts to bypass refund and pricing controls."
+  ],
+  "rules": [
+    {
+      "rule_id": "RETAIL-CONTENT-001",
+      "stage": "CONTENT",
+      "severity": "HIGH",
+      "outcome": "BLOCK",
+      "description": "Fabricating coupon codes or instructing the system to override prices, refunds, or free-item authorization is prohibited.",
+      "classifier_instruction": "Match requests to invent or falsely promise promotions, bypass price controls, grant an unauthorized free item, or defeat refund approval; do not match use of a verified promotion or explanation of a published policy.",
+      "patterns": [],
+      "keywords": ["invent a coupon code", "override the listed price", "grant an unauthorized free item"],
+      "obligations": ["Do not fabricate an alternative promotion or claim that a discount exists."]
+    },
+    {
+      "rule_id": "RETAIL-CONTENT-002",
+      "stage": "CONTENT",
+      "severity": "MEDIUM",
+      "outcome": "REVIEW",
+      "description": "Definitive stock or delivery guarantees require a current trusted inventory or logistics source.",
+      "classifier_instruction": "Match an unconditional inventory or delivery guarantee when no current verified source is present; do not match appropriately qualified availability statements.",
+      "patterns": [],
+      "keywords": ["guarantee this is in stock", "guaranteed delivery without logistics data"],
+      "obligations": ["State the source timestamp and qualify availability if an approved workflow permits a response."]
+    },
+    {
+      "rule_id": "RETAIL-CONTENT-003",
+      "stage": "CONTENT",
+      "severity": "CRITICAL",
+      "outcome": "BLOCK",
+      "description": "Collection, disclosure, or misuse of complete payment-card data, CVVs, credentials, or payment tokens is prohibited.",
+      "classifier_instruction": "Match requests to solicit, reveal, validate, or misuse full card numbers, CVVs, PINs, passwords, one-time passcodes, or raw payment tokens; do not reproduce any detected value.",
+      "patterns": [],
+      "keywords": ["full card number and CVV", "raw payment token", "checkout password"],
+      "obligations": ["Direct legitimate payment activity to an approved secure checkout surface.", "Do not include detected payment data in the decision or audit metadata."]
+    },
+    {
+      "rule_id": "RETAIL-CONTENT-004",
+      "stage": "CONTENT",
+      "severity": "HIGH",
+      "outcome": "REVIEW",
+      "description": "Requests to access or export another customer's orders, identity, or contact details require authorization review.",
+      "classifier_instruction": "Match customer-specific order, contact, loyalty, or identity data when ownership, support need, or authorization is absent or unclear.",
+      "patterns": [],
+      "keywords": ["another customer's order", "export customer contact list", "look up someone else's purchase"],
+      "obligations": ["Verify authority outside the model conversation before disclosing customer data."]
+    },
+    {
+      "rule_id": "RETAIL-ACTION-001",
+      "stage": "ACTION",
+      "severity": "CRITICAL",
+      "outcome": "BLOCK",
+      "description": "Pricing-control bypass, payment-secret collection, and unauthorized grant tools are always denied.",
+      "classifier_instruction": null,
+      "patterns": ["pricing.override", "discount.fabricate", "payment_secret.*", "free_item.grant_unapproved", "credential.*"],
+      "keywords": [],
+      "obligations": ["User confirmation must never override this hard block."]
+    },
+    {
+      "rule_id": "RETAIL-ACTION-002",
+      "stage": "ACTION",
+      "severity": "HIGH",
+      "outcome": "REVIEW",
+      "description": "Charges, refunds, cancellations, price adjustments, fulfillment changes, and customer-data exports require review or confirmation.",
+      "classifier_instruction": null,
+      "patterns": ["payment.charge", "refund.*", "order.cancel", "order.modify", "price.adjust", "customer.export"],
+      "keywords": [],
+      "obligations": ["Show the customer, order, amount, and irreversible effects before confirmation."]
+    }
+  ],
+  "action_constraints": {
+    "allowed_tools": ["catalog.search", "product.read", "inventory.read", "promotion.read", "order.status.read", "store.locate", "faq.*"],
+    "denied_tools": ["pricing.override", "discount.fabricate", "payment_secret.*", "free_item.grant_unapproved", "credential.*"],
+    "review_tools": ["payment.charge", "refund.*", "order.cancel", "order.modify", "price.adjust", "customer.*"],
+    "confirmation_required_tools": ["payment.charge", "refund.create", "order.cancel", "order.modify", "price.adjust"],
+    "allowed_destinations": ["same-customer:*", "approved-fulfillment:*", "approved-internal:*", "payment-processor:*"],
+    "denied_destinations": ["public:*", "unverified:*", "advertising:*"],
+    "denied_argument_names": ["password", "pin", "cvv", "one_time_password", "raw_payment_token", "full_card_number"],
+    "blocked_data_labels": ["CREDENTIAL"],
+    "sensitive_labels_requiring_review": ["PAYMENT", "PII", "CONFIDENTIAL"],
+    "unknown_tool_outcome": "REVIEW",
+    "review_if_irreversible": true,
+    "review_if_untrusted_source": true
+  },
+  "obligations": [
+    {
+      "obligation_id": "RETAIL-OBL-001",
+      "stage": "CALLER",
+      "description": "Treat REVIEW and ERROR decisions as not authorized until an approved commerce or support workflow resolves them.",
+      "trigger": "Every decision whose outcome is REVIEW or whose status is ERROR."
+    },
+    {
+      "obligation_id": "RETAIL-OBL-002",
+      "stage": "CALLER",
+      "description": "Use a compliant payment surface; do not route raw payment secrets through Sentinel.",
+      "trigger": "Any checkout, charge, refund, or payment-support interaction."
+    },
+    {
+      "obligation_id": "RETAIL-OBL-003",
+      "stage": "CONTENT",
+      "description": "Qualify inventory and delivery claims with the current source and timestamp.",
+      "trigger": "Any response that represents inventory or delivery availability."
+    }
+  ]
+}

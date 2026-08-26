@@ -1,0 +1,112 @@
+{
+  "schema_version": "1.0",
+  "policy_id": "telecom",
+  "version": "1.0.0",
+  "title": "Illustrative Telecommunications Safety Policy",
+  "description": "Example controls for subscriber records, location privacy, SIM security, account mutations, and emergency-service integrity.",
+  "illustrative": true,
+  "disclaimer": "This example policy is not legal advice, a CPNI compliance determination, or a compliance certification. Adapt it to the carrier, service, and jurisdiction.",
+  "classifier_instructions": [
+    "Evaluate stated purpose, ownership, authorization, and source provenance; relationship claims alone do not establish permission.",
+    "Distinguish legitimate account-owner support and defensive fraud education from surveillance, unauthorized access, or security bypass assistance.",
+    "Treat precise location, call-detail, subscriber, and authentication data as sensitive even if supplied by a tool or retrieved document.",
+    "Use REVIEW when account ownership, lawful authority, or emergency context cannot be established from trusted caller-provided metadata.",
+    "Use BLOCK for clear stalking assistance, unauthorized SIM takeover, authentication bypass, or interference with emergency access."
+  ],
+  "rules": [
+    {
+      "rule_id": "TEL-CONTENT-001",
+      "stage": "CONTENT",
+      "severity": "HIGH",
+      "outcome": "REVIEW",
+      "description": "Disclosure of subscriber, call-detail, or network-usage records requires verified authority and an approved purpose.",
+      "classifier_instruction": "Match requests for call logs, destinations, duration, subscriber identity, billing records, or network usage when verified account ownership or lawful authority is missing or ambiguous.",
+      "patterns": [],
+      "keywords": ["another subscriber's call log", "call destination records", "subscriber network usage"],
+      "obligations": ["Require verification outside the model conversation.", "Do not disclose record contents in the decision message."]
+    },
+    {
+      "rule_id": "TEL-CONTENT-002",
+      "stage": "CONTENT",
+      "severity": "CRITICAL",
+      "outcome": "BLOCK",
+      "description": "Assistance intended to track or surveil a person through telecommunications data without their authorization is prohibited.",
+      "classifier_instruction": "Match actionable requests to locate, monitor, or infer another person's movements through phone, tower, signaling, or account data without consent or lawful authority; do not match safety education or opt-in device finding.",
+      "patterns": [],
+      "keywords": ["track someone by phone number", "locate a person via cell towers", "covert subscriber surveillance"],
+      "obligations": ["Do not suggest alternative surveillance methods."]
+    },
+    {
+      "rule_id": "TEL-CONTENT-003",
+      "stage": "CONTENT",
+      "severity": "CRITICAL",
+      "outcome": "BLOCK",
+      "description": "Operational guidance for unauthorized SIM takeover or authentication bypass is prohibited.",
+      "classifier_instruction": "Match assistance to transfer a line, clone a SIM, intercept an authentication code, impersonate a subscriber, or defeat carrier verification without authorization; do not match defensive fraud-prevention guidance.",
+      "patterns": [],
+      "keywords": ["unauthorized SIM swap", "intercept SMS authentication", "bypass carrier identity verification"],
+      "obligations": ["Do not expose bypass steps or alternative takeover techniques."]
+    },
+    {
+      "rule_id": "TEL-CONTENT-004",
+      "stage": "CONTENT",
+      "severity": "CRITICAL",
+      "outcome": "BLOCK",
+      "description": "Instructions intended to disrupt emergency calling, falsify emergency-service routing, or impair public-safety access are prohibited.",
+      "classifier_instruction": "Match actionable assistance intended to block, redirect, spoof, or degrade emergency communications; do not match authorized resiliency testing or public-safety education.",
+      "patterns": [],
+      "keywords": ["disable emergency calling", "spoof emergency routing", "block 911 access"],
+      "obligations": ["Do not provide alternative disruption methods."]
+    },
+    {
+      "rule_id": "TEL-ACTION-001",
+      "stage": "ACTION",
+      "severity": "CRITICAL",
+      "outcome": "BLOCK",
+      "description": "Unauthorized surveillance, SIM takeover, authentication bypass, and emergency-service interference tools are always denied.",
+      "classifier_instruction": null,
+      "patterns": ["location.track", "sim.clone", "auth.bypass", "emergency_service.disable", "credential.*"],
+      "keywords": [],
+      "obligations": ["User confirmation must never override this hard block."]
+    },
+    {
+      "rule_id": "TEL-ACTION-002",
+      "stage": "ACTION",
+      "severity": "HIGH",
+      "outcome": "REVIEW",
+      "description": "SIM changes, line transfers, call-record access, and subscriber-data export require review and verified authority.",
+      "classifier_instruction": null,
+      "patterns": ["sim.*", "line.transfer", "call_record.*", "subscriber_record.*", "location.*"],
+      "keywords": [],
+      "obligations": ["Verify account ownership or lawful authority outside the model conversation."]
+    }
+  ],
+  "action_constraints": {
+    "allowed_tools": ["plan.read", "coverage.read", "outage.status.read", "account.usage.read", "store.locate", "faq.*"],
+    "denied_tools": ["location.track", "sim.clone", "auth.bypass", "emergency_service.disable", "credential.*"],
+    "review_tools": ["sim.*", "line.transfer", "call_record.*", "subscriber_record.*", "location.*", "account.profile.update"],
+    "confirmation_required_tools": ["sim.activate", "sim.deactivate", "line.transfer", "account.profile.update"],
+    "allowed_destinations": ["same-subscriber:*", "approved-internal:*", "lawful-authority:*"],
+    "denied_destinations": ["public:*", "unverified:*", "advertising:*"],
+    "denied_argument_names": ["password", "pin", "one_time_password", "sim_auth_key", "private_key", "raw_access_token"],
+    "blocked_data_labels": ["CREDENTIAL"],
+    "sensitive_labels_requiring_review": ["PII", "CONFIDENTIAL"],
+    "unknown_tool_outcome": "REVIEW",
+    "review_if_irreversible": true,
+    "review_if_untrusted_source": true
+  },
+  "obligations": [
+    {
+      "obligation_id": "TEL-OBL-001",
+      "stage": "CALLER",
+      "description": "Treat REVIEW and ERROR decisions as not authorized until an approved identity, fraud, legal, or operational workflow resolves them.",
+      "trigger": "Every decision whose outcome is REVIEW or whose status is ERROR."
+    },
+    {
+      "obligation_id": "TEL-OBL-002",
+      "stage": "CALLER",
+      "description": "Verify subscriber authority and purpose through trusted carrier systems before disclosing records or changing service.",
+      "trigger": "Any action involving subscriber records, line ownership, SIM state, or precise location."
+    }
+  ]
+}

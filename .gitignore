@@ -1,11 +1,47 @@
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+
+# Build and packaging output
+build/
+dist/
+*.egg-info/
+
+# Sentinel runtime state and evaluation output
+.sentinel_cache/
+.sentinel/
+sentinel-audit.db
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-wal
+*.sqlite3-shm
+*.lancedb/
+eval-report*.json
+reports/
+
+# Local credentials and environment overrides
 .env
+.env.*
+!.env.example
 .venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Editors and operating systems
+.idea/
+.vscode/
 .DS_Store

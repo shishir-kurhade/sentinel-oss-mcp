@@ -1,0 +1,118 @@
+{
+  "schema_version": "1.0",
+  "policy_id": "healthcare",
+  "version": "1.0.0",
+  "title": "Illustrative Healthcare Safety Policy",
+  "description": "Example controls for health-data privacy, clinical guidance, emergencies, medical-device safety, and record integrity.",
+  "illustrative": true,
+  "disclaimer": "This example policy is not medical advice, legal advice, a HIPAA determination, or a compliance certification. Adapt it with qualified clinical, privacy, and legal review.",
+  "classifier_instructions": [
+    "Evaluate the full exchange and distinguish general health education from diagnosis, prescribing, or patient-specific treatment decisions.",
+    "Do not repeat suspected health identifiers or credentials in reasoning, signals, logs, or the decision message.",
+    "Treat a credible description of imminent serious harm or a medical emergency as urgent even when phrased indirectly.",
+    "Distinguish defensive device-security research from instructions intended to disable, tamper with, or endanger a real device.",
+    "Use REVIEW when authorization, patient identity, clinical context, or urgency is ambiguous."
+  ],
+  "rules": [
+    {
+      "rule_id": "HEALTH-CONTENT-001",
+      "stage": "CONTENT",
+      "severity": "HIGH",
+      "outcome": "REVIEW",
+      "description": "Requests to disclose or act on identifiable patient health information require authorization and purpose review.",
+      "classifier_instruction": "Match when identifiable health details, medical record identifiers, or patient records are requested, supplied, or routed and the authorization or minimum-necessary purpose is absent or unclear.",
+      "patterns": [],
+      "keywords": ["patient medical record", "identifiable health information", "medical record identifier"],
+      "obligations": ["Do not include detected patient details in the decision.", "Require authorization verification outside the model conversation."]
+    },
+    {
+      "rule_id": "HEALTH-CONTENT-002",
+      "stage": "CONTENT",
+      "severity": "HIGH",
+      "outcome": "REVIEW",
+      "description": "Definitive diagnosis, prescribing, dosage changes, and patient-specific treatment decisions require qualified clinical review.",
+      "classifier_instruction": "Match advice that claims certainty about a diagnosis or directs a specific prescription or dosage for an individual; do not match general education or encouragement to consult a clinician.",
+      "patterns": [],
+      "keywords": ["definitive diagnosis", "change prescribed dosage", "patient-specific treatment"],
+      "obligations": ["Do not present an automated decision as a clinician's judgment.", "Use the application's approved medical-information disclaimer in any permitted response."]
+    },
+    {
+      "rule_id": "HEALTH-CONTENT-003",
+      "stage": "CONTENT",
+      "severity": "CRITICAL",
+      "outcome": "REVIEW",
+      "description": "Potential life-threatening emergencies require immediate escalation to local emergency resources.",
+      "classifier_instruction": "Match credible indications of an immediate threat to life or serious health, including severe breathing difficulty, uncontrolled bleeding, suspected overdose, or acute neurological symptoms; avoid diagnosing the condition.",
+      "patterns": [],
+      "keywords": ["medical emergency", "immediate threat to life", "severe uncontrolled bleeding"],
+      "obligations": ["Prompt the caller to present its approved emergency-services guidance immediately.", "Do not delay emergency guidance to collect additional personal data."]
+    },
+    {
+      "rule_id": "HEALTH-CONTENT-004",
+      "stage": "CONTENT",
+      "severity": "CRITICAL",
+      "outcome": "BLOCK",
+      "description": "Instructions intended to tamper with safety-critical medical devices or falsify clinical evidence are prohibited.",
+      "classifier_instruction": "Match operational assistance intended to disable safeguards, alter a deployed device without authorization, fabricate clinical records, or falsify trial data; do not match high-level defensive research or authorized quality-control work.",
+      "patterns": [],
+      "keywords": ["disable medical device safety control", "falsify clinical trial data", "fabricate patient record"],
+      "obligations": ["Do not provide alternative tampering or falsification techniques."]
+    },
+    {
+      "rule_id": "HEALTH-ACTION-001",
+      "stage": "ACTION",
+      "severity": "CRITICAL",
+      "outcome": "BLOCK",
+      "description": "Unauthorized medical-device mutation, record falsification, credential collection, and safety-control bypass actions are always denied.",
+      "classifier_instruction": null,
+      "patterns": ["medical_device.modify", "medical_device.safety.disable", "clinical_record.falsify", "credential.*"],
+      "keywords": [],
+      "obligations": ["User confirmation must never override this hard block."]
+    },
+    {
+      "rule_id": "HEALTH-ACTION-002",
+      "stage": "ACTION",
+      "severity": "HIGH",
+      "outcome": "REVIEW",
+      "description": "Clinical decisions, prescription changes, patient-record export, and external health-data transmission require qualified review.",
+      "classifier_instruction": null,
+      "patterns": ["diagnosis.*", "prescription.*", "clinical_order.*", "patient_record.export", "patient_record.share"],
+      "keywords": [],
+      "obligations": ["Verify clinical role, patient authorization, and destination before execution."]
+    }
+  ],
+  "action_constraints": {
+    "allowed_tools": ["health.education.read", "provider.search", "appointment.availability.read", "appointment.read", "faq.*"],
+    "denied_tools": ["medical_device.modify", "medical_device.safety.disable", "clinical_record.falsify", "credential.*"],
+    "review_tools": ["diagnosis.*", "prescription.*", "clinical_order.*", "patient_record.*", "appointment.create", "appointment.cancel"],
+    "confirmation_required_tools": ["appointment.create", "appointment.cancel", "patient_record.share"],
+    "allowed_destinations": ["same-patient:*", "approved-care-team:*", "approved-internal:*"],
+    "denied_destinations": ["public:*", "unverified:*", "advertising:*"],
+    "denied_argument_names": ["password", "one_time_password", "private_key", "raw_access_token"],
+    "blocked_data_labels": ["CREDENTIAL"],
+    "sensitive_labels_requiring_review": ["PHI", "PII", "CONFIDENTIAL"],
+    "unknown_tool_outcome": "REVIEW",
+    "review_if_irreversible": true,
+    "review_if_untrusted_source": true
+  },
+  "obligations": [
+    {
+      "obligation_id": "HEALTH-OBL-001",
+      "stage": "CALLER",
+      "description": "Treat REVIEW and ERROR decisions as not authorized until an approved clinical, privacy, or operational workflow resolves them.",
+      "trigger": "Every decision whose outcome is REVIEW or whose status is ERROR."
+    },
+    {
+      "obligation_id": "HEALTH-OBL-002",
+      "stage": "CONTENT",
+      "description": "Show approved emergency guidance without waiting for another model call.",
+      "trigger": "A HEALTH-CONTENT-003 match."
+    },
+    {
+      "obligation_id": "HEALTH-OBL-003",
+      "stage": "CALLER",
+      "description": "Apply data minimization, authorization, retention, and jurisdiction-specific privacy controls outside Sentinel.",
+      "trigger": "Any handling of PII or PHI."
+    }
+  ]
+}

@@ -1,0 +1,275 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  validate-release-ref:
+    name: Validate approved release ref
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Require version, reviewed corpus, and protected-main ancestry
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          python scripts/verify_eval_review.py
+          python -c 'import os, pathlib, tomllib; version = tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["version"]; tag = os.environ["RELEASE_TAG"]; expected = f"v{version}"; assert tag == expected, f"tag {tag!r} does not match {expected!r}"'
+          test "$(git cat-file -t "refs/tags/${RELEASE_TAG}")" = "tag"
+          test "$(git rev-list -n 1 "refs/tags/${RELEASE_TAG}")" = "${RELEASE_SHA}"
+          git merge-base --is-ancestor "${RELEASE_SHA}" "origin/main"
+      - name: Require GitHub-verified annotated tag signature
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          tag_object="$(git rev-parse "refs/tags/${RELEASE_TAG}^{tag}")"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${tag_object}" --jq '.verification.verified')" = "true"
+
+  secret-scan:
+    name: Full-history secret scan
+    needs: [validate-release-ref]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan every Git ref with pinned Gitleaks
+        shell: bash
+        run: |
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --volume "${GITHUB_WORKSPACE}:/repo" \
+            --workdir /repo \
+            ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
+            git --redact --verbose --log-opts=--all .
+      - name: Reject historical runtime data
+        shell: bash
+        run: |
+          if git rev-list --all --objects | awk '$2 ~ /^[.]sentinel_cache\// || $2 == "assets/dashboard.png" { found=1 } END { exit found ? 0 : 1 }'; then
+            echo "Sensitive prototype runtime data remains reachable from Git history." >&2
+            echo "Follow RELEASE.md and remove both forbidden paths from every ref." >&2
+            exit 1
+          fi
+
+  offline-matrix:
+    name: Offline release tests (Python ${{ matrix.python-version }})
+    needs: [validate-release-ref]
+    runs-on: ubuntu-latest
+    env:
+      SENTINEL_OFFLINE: "1"
+      SENTINEL_DATA_DIR: ${{ runner.temp }}/sentinel
+      GOOGLE_API_KEY: ""
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install offline test dependencies
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+      - name: Test the exact tagged source
+        run: pytest -m "not live"
+
+  build:
+    name: Validate and build once
+    needs: [offline-matrix, secret-scan]
+    runs-on: ubuntu-latest
+    env:
+      SENTINEL_DATA_DIR: ${{ runner.temp }}/sentinel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install release dependencies
+        run: >-
+          python -m pip install --upgrade pip &&
+          python -m pip install ".[gemini,vector,dashboard,dev]"
+      - name: Scan source and dependencies
+        run: |
+          bandit -q -lll -r src/sentinel_oss
+          python -m pip freeze --exclude sentinel-oss-mcp > "${RUNNER_TEMP}/sentinel-dependencies.txt"
+          python -m pip_audit --strict --desc --requirement "${RUNNER_TEMP}/sentinel-dependencies.txt"
+      - name: Run offline release suite
+        env:
+          SENTINEL_OFFLINE: "1"
+          GOOGLE_API_KEY: ""
+        run: >-
+          pytest -m "not live"
+          --cov=sentinel_oss
+          --cov-branch
+          --cov-report=term-missing
+          --cov-fail-under=90
+      - name: Enforce decision-routing coverage
+        run: >-
+          pytest -m "not live"
+          tests/test_engine.py
+          tests/test_actions.py
+          tests/test_runtime.py
+          tests/test_security_regressions.py
+          --cov=sentinel_oss.engine
+          --cov-branch
+          --cov-report=term-missing
+          --cov-fail-under=95
+      - name: Build and check artifacts
+        run: python -m build && python -m twine check dist/*
+      - name: Smoke-test wheel and MCP handshake in isolation
+        shell: bash
+        run: |
+          python -m venv /tmp/sentinel-release-wheel
+          /tmp/sentinel-release-wheel/bin/python -m pip install dist/*.whl
+          /tmp/sentinel-release-wheel/bin/sentinel-oss --help
+          /tmp/sentinel-release-wheel/bin/sentinel-oss-mcp --help
+          /tmp/sentinel-release-wheel/bin/python tests/wheel_mcp_smoke.py
+          python -m venv /tmp/sentinel-release-sdist
+          /tmp/sentinel-release-sdist/bin/python -m pip install dist/*.tar.gz
+          /tmp/sentinel-release-sdist/bin/python -c "import sentinel_oss"
+          /tmp/sentinel-release-sdist/bin/sentinel-oss --help
+      - name: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-distributions
+          path: dist/
+          if-no-files-found: error
+
+  live-evaluation:
+    name: Protected live Gemini evaluation
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: release-live
+    env:
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+      SENTINEL_OFFLINE: "0"
+      SENTINEL_SEMANTIC_ENABLED: "0"
+      SENTINEL_DATA_DIR: ${{ runner.temp }}/sentinel
+      SENTINEL_EVAL_CORPUS_COMMIT: ${{ github.sha }}
+      SENTINEL_EVAL_PRICE_SOURCE_URL: ${{ vars.SENTINEL_EVAL_PRICE_SOURCE_URL }}
+      SENTINEL_EVAL_PRICE_ACCESSED_AT: ${{ vars.SENTINEL_EVAL_PRICE_ACCESSED_AT }}
+      SENTINEL_LIGHTWEIGHT_INPUT_PRICE_PER_MILLION: ${{ vars.SENTINEL_LIGHTWEIGHT_INPUT_PRICE_PER_MILLION }}
+      SENTINEL_LIGHTWEIGHT_OUTPUT_PRICE_PER_MILLION: ${{ vars.SENTINEL_LIGHTWEIGHT_OUTPUT_PRICE_PER_MILLION }}
+      SENTINEL_EXPERT_INPUT_PRICE_PER_MILLION: ${{ vars.SENTINEL_EXPERT_INPUT_PRICE_PER_MILLION }}
+      SENTINEL_EXPERT_OUTPUT_PRICE_PER_MILLION: ${{ vars.SENTINEL_EXPERT_OUTPUT_PRICE_PER_MILLION }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require protected live-evaluation configuration
+        shell: bash
+        run: |
+          missing=()
+          [[ -n "${GOOGLE_API_KEY}" ]] || missing+=("GOOGLE_API_KEY environment secret")
+          [[ -n "${SENTINEL_LIGHTWEIGHT_INPUT_PRICE_PER_MILLION}" ]] || missing+=("SENTINEL_LIGHTWEIGHT_INPUT_PRICE_PER_MILLION environment variable")
+          [[ -n "${SENTINEL_LIGHTWEIGHT_OUTPUT_PRICE_PER_MILLION}" ]] || missing+=("SENTINEL_LIGHTWEIGHT_OUTPUT_PRICE_PER_MILLION environment variable")
+          [[ -n "${SENTINEL_EXPERT_INPUT_PRICE_PER_MILLION}" ]] || missing+=("SENTINEL_EXPERT_INPUT_PRICE_PER_MILLION environment variable")
+          [[ -n "${SENTINEL_EXPERT_OUTPUT_PRICE_PER_MILLION}" ]] || missing+=("SENTINEL_EXPERT_OUTPUT_PRICE_PER_MILLION environment variable")
+          [[ -n "${SENTINEL_EVAL_PRICE_SOURCE_URL}" ]] || missing+=("SENTINEL_EVAL_PRICE_SOURCE_URL environment variable")
+          [[ -n "${SENTINEL_EVAL_PRICE_ACCESSED_AT}" ]] || missing+=("SENTINEL_EVAL_PRICE_ACCESSED_AT environment variable")
+          if (( ${#missing[@]} )); then
+            printf 'Missing required live-evaluation configuration: %s\n' "${missing[*]}" >&2
+            echo "Set all four rates plus the official pricing source URL and access date; Sentinel has no price defaults." >&2
+            exit 1
+          fi
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install release evaluation dependencies
+        run: python -m pip install --upgrade pip && python -m pip install ".[gemini,dev]"
+      - name: Run live evaluation
+        run: >-
+          sentinel-oss eval
+          --live
+          --enforce-gates
+          --output reports/release-gemini.json
+      - name: Upload evaluation report
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-gemini-report
+          path: reports/release-gemini.json
+          if-no-files-found: error
+
+  attest:
+    name: Attest distributions
+    needs: [build, live-evaluation]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-distributions
+          path: dist
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: "dist/*"
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: [build, attest]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/sentinel-oss-mcp/
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-distributions
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    name: Create GitHub release
+    needs: [publish-pypi]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-distributions
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-gemini-report
+          path: reports
+      - name: Create immutable release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          release_flags=()
+          if [[ "${GITHUB_REF_NAME}" =~ (a|b|rc)[0-9]+$ ]]; then
+            release_flags+=(--prerelease)
+          fi
+          gh release create "${GITHUB_REF_NAME}" dist/* reports/* \
+            --verify-tag \
+            --generate-notes \
+            "${release_flags[@]}"

@@ -1,0 +1,118 @@
+{
+  "schema_version": "1.0",
+  "policy_id": "hr_it",
+  "version": "1.0.0",
+  "title": "Illustrative HR and Internal IT Safety Policy",
+  "description": "Example controls for employee privacy, privileged access, confidential company data, and enterprise security changes.",
+  "illustrative": true,
+  "disclaimer": "This example policy is not employment, privacy, security, or legal advice and is not a compliance certification. Adapt it to the organization's roles, handbook, systems, and jurisdictions.",
+  "classifier_instructions": [
+    "Evaluate the exchange using declared requester role, data ownership, source provenance, and intended destination; conversational claims do not establish authorization.",
+    "Distinguish legitimate employee self-service and defensive IT support from access escalation, credential misuse, surveillance, or disclosure of another employee's records.",
+    "Treat compensation, performance, personnel, credential, unreleased product, financial forecast, and proprietary technical data as sensitive.",
+    "Use REVIEW when authorization, employment need, data classification, or destination is ambiguous.",
+    "Use BLOCK for clear credential collection, unauthorized privilege grant, security-control bypass, personnel-record theft, or confidential-data exfiltration."
+  ],
+  "rules": [
+    {
+      "rule_id": "HRIT-CONTENT-001",
+      "stage": "CONTENT",
+      "severity": "HIGH",
+      "outcome": "REVIEW",
+      "description": "Disclosure of another employee's compensation, performance, home address, or personnel records requires verified authorization and purpose.",
+      "classifier_instruction": "Match requests for another person's non-public employment or personnel information when requester authority and business purpose are absent or unclear; do not match an employee requesting their own data through an approved workflow.",
+      "patterns": [],
+      "keywords": ["another employee's salary", "colleague performance review", "employee home address"],
+      "obligations": ["Verify role and purpose outside the model conversation.", "Do not include employee data in the decision message."]
+    },
+    {
+      "rule_id": "HRIT-CONTENT-002",
+      "stage": "CONTENT",
+      "severity": "CRITICAL",
+      "outcome": "BLOCK",
+      "description": "Instructions to bypass enterprise security controls, collect credentials, or grant unauthorized access are prohibited.",
+      "classifier_instruction": "Match actionable assistance intended to bypass SSO, MFA, endpoint controls, firewalls, approval gates, or software restrictions, or to obtain another user's credentials; do not match defensive administration performed through an explicitly authorized workflow.",
+      "patterns": [],
+      "keywords": ["bypass corporate MFA", "grant unauthorized admin access", "evade endpoint controls"],
+      "obligations": ["Direct legitimate access needs to the approved identity or IT service workflow.", "Do not suggest alternate bypass techniques."]
+    },
+    {
+      "rule_id": "HRIT-CONTENT-003",
+      "stage": "CONTENT",
+      "severity": "HIGH",
+      "outcome": "REVIEW",
+      "description": "Requests to disclose or transmit confidential corporate strategy, forecasts, intellectual property, or unreleased product information require authorization review.",
+      "classifier_instruction": "Match non-public product, financial, source-code, trade-secret, acquisition, or strategy information when requester authority or destination approval is missing or unclear.",
+      "patterns": [],
+      "keywords": ["unreleased product roadmap", "confidential financial forecast", "proprietary source code"],
+      "obligations": ["Verify classification, need-to-know, and destination outside the model conversation."]
+    },
+    {
+      "rule_id": "HRIT-CONTENT-004",
+      "stage": "CONTENT",
+      "severity": "MEDIUM",
+      "outcome": "REVIEW",
+      "description": "Employment-policy interpretation or consequential HR recommendations require current authoritative policy and human review.",
+      "classifier_instruction": "Match decisions or recommendations affecting hiring, discipline, compensation, termination, accommodation, or protected leave; do not match neutral summaries of supplied current policy.",
+      "patterns": [],
+      "keywords": ["terminate this employee", "deny workplace accommodation", "disciplinary recommendation"],
+      "obligations": ["Route consequential employment decisions to an authorized human reviewer."]
+    },
+    {
+      "rule_id": "HRIT-ACTION-001",
+      "stage": "ACTION",
+      "severity": "CRITICAL",
+      "outcome": "BLOCK",
+      "description": "Security-control bypass, credential collection, unauthorized privilege grant, and personnel-record exfiltration tools are always denied.",
+      "classifier_instruction": null,
+      "patterns": ["security_control.bypass", "credential.*", "access.grant_unapproved", "personnel_record.exfiltrate"],
+      "keywords": [],
+      "obligations": ["User confirmation must never override this hard block."]
+    },
+    {
+      "rule_id": "HRIT-ACTION-002",
+      "stage": "ACTION",
+      "severity": "HIGH",
+      "outcome": "REVIEW",
+      "description": "Access changes, password resets, employee-record access, software installation, and confidential-data export require review or approved confirmation.",
+      "classifier_instruction": null,
+      "patterns": ["access.*", "password.reset", "employee_record.*", "software.install", "confidential_data.export", "endpoint.*"],
+      "keywords": [],
+      "obligations": ["Verify operator role, ticket or approval reference, subject, and destination before execution."]
+    }
+  ],
+  "action_constraints": {
+    "allowed_tools": ["handbook.read", "benefits.read", "ticket.create", "ticket.status.read", "directory.self.read", "software.catalog.read", "faq.*"],
+    "denied_tools": ["security_control.bypass", "credential.*", "access.grant_unapproved", "personnel_record.exfiltrate"],
+    "review_tools": ["access.*", "password.reset", "employee_record.*", "software.install", "confidential_data.*", "endpoint.*"],
+    "confirmation_required_tools": ["access.revoke", "password.reset", "software.install", "endpoint.quarantine"],
+    "allowed_destinations": ["same-employee:*", "approved-manager:*", "approved-hr:*", "approved-it:*", "approved-internal:*"],
+    "denied_destinations": ["personal-email:*", "public:*", "unverified:*", "competitor:*"],
+    "denied_argument_names": ["password", "one_time_password", "private_key", "recovery_code", "raw_access_token"],
+    "blocked_data_labels": ["CREDENTIAL"],
+    "sensitive_labels_requiring_review": ["PII", "INTERNAL", "CONFIDENTIAL"],
+    "unknown_tool_outcome": "REVIEW",
+    "review_if_irreversible": true,
+    "review_if_untrusted_source": true
+  },
+  "obligations": [
+    {
+      "obligation_id": "HRIT-OBL-001",
+      "stage": "CALLER",
+      "description": "Treat REVIEW and ERROR decisions as not authorized until an approved HR, privacy, security, or IT workflow resolves them.",
+      "trigger": "Every decision whose outcome is REVIEW or whose status is ERROR."
+    },
+    {
+      "obligation_id": "HRIT-OBL-002",
+      "stage": "CALLER",
+      "description": "Verify role, need-to-know, approval, and data destination through authoritative enterprise systems.",
+      "trigger": "Any access mutation or handling of employee or confidential company data."
+    },
+    {
+      "obligation_id": "HRIT-OBL-003",
+      "stage": "CALLER",
+      "description": "Route password resets, software installation, and access grants through the approved service-management or identity workflow.",
+      "trigger": "Any IT support request that changes account or endpoint state."
+    }
+  ]
+}
