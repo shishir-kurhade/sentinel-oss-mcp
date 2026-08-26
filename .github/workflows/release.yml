@@ -150,7 +150,7 @@ jobs:
           /tmp/sentinel-release-sdist/bin/python -c "import sentinel_oss"
           /tmp/sentinel-release-sdist/bin/sentinel-oss --help
       - name: Upload distributions
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-distributions
           path: dist/
@@ -205,7 +205,7 @@ jobs:
           --enforce-gates
           --output reports/release-gemini.json
       - name: Upload evaluation report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-gemini-report
           path: reports/release-gemini.json
