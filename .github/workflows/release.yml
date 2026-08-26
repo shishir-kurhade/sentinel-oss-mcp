@@ -76,7 +76,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SENTINEL_OFFLINE: "1"
-      SENTINEL_DATA_DIR: ${{ runner.temp }}/sentinel
+      SENTINEL_DATA_DIR: /tmp/sentinel
       GOOGLE_API_KEY: ""
     strategy:
       fail-fast: false
@@ -98,7 +98,7 @@ jobs:
     needs: [offline-matrix, secret-scan]
     runs-on: ubuntu-latest
     env:
-      SENTINEL_DATA_DIR: ${{ runner.temp }}/sentinel
+      SENTINEL_DATA_DIR: /tmp/sentinel
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -166,7 +166,7 @@ jobs:
       GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
       SENTINEL_OFFLINE: "0"
       SENTINEL_SEMANTIC_ENABLED: "0"
-      SENTINEL_DATA_DIR: ${{ runner.temp }}/sentinel
+      SENTINEL_DATA_DIR: /tmp/sentinel
       SENTINEL_EVAL_CORPUS_COMMIT: ${{ github.sha }}
       SENTINEL_EVAL_PRICE_SOURCE_URL: ${{ vars.SENTINEL_EVAL_PRICE_SOURCE_URL }}
       SENTINEL_EVAL_PRICE_ACCESSED_AT: ${{ vars.SENTINEL_EVAL_PRICE_ACCESSED_AT }}

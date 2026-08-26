@@ -37,3 +37,11 @@ def test_release_ref_and_supported_python_matrix_gate_secrets_and_publication() 
     assert "needs: [offline-matrix, secret-scan]" in workflow
     assert "needs: [build]" in workflow
     assert "environment: release-live" in workflow
+
+
+@pytest.mark.parametrize("workflow_name", ["ci.yml", "nightly-live.yml", "release.yml"])
+def test_job_level_data_directory_does_not_use_runner_context(workflow_name: str) -> None:
+    workflow = (REPOSITORY_ROOT / ".github" / "workflows" / workflow_name).read_text()
+
+    assert "SENTINEL_DATA_DIR: /tmp/sentinel" in workflow
+    assert "${{ runner.temp }}" not in workflow

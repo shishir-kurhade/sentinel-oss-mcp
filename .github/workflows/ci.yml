@@ -44,7 +44,7 @@ jobs:
     name: Offline tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     env:
-      SENTINEL_DATA_DIR: ${{ runner.temp }}/sentinel
+      SENTINEL_DATA_DIR: /tmp/sentinel
     strategy:
       fail-fast: false
       matrix:
@@ -89,7 +89,7 @@ jobs:
     needs: [quality, test]
     runs-on: ubuntu-latest
     env:
-      SENTINEL_DATA_DIR: ${{ runner.temp }}/sentinel
+      SENTINEL_DATA_DIR: /tmp/sentinel
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
