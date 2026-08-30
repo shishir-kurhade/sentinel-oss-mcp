@@ -21,7 +21,7 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
       - name: Require version, reviewed corpus, and protected-main ancestry
@@ -84,7 +84,7 @@ jobs:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -101,7 +101,7 @@ jobs:
       SENTINEL_DATA_DIR: /tmp/sentinel
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
           cache: pip
@@ -192,7 +192,7 @@ jobs:
             echo "Set all four rates plus the official pricing source URL and access date; Sentinel has no price defaults." >&2
             exit 1
           fi
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
           cache: pip
