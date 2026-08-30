@@ -48,7 +48,7 @@ jobs:
             echo "Set all four rates plus the official pricing source URL and access date; Sentinel has no price defaults." >&2
             exit 1
           fi
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
           cache: pip
