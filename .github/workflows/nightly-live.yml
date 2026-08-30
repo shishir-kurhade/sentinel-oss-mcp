@@ -31,7 +31,7 @@ jobs:
       SENTINEL_EXPERT_INPUT_PRICE_PER_MILLION: ${{ vars.SENTINEL_EXPERT_INPUT_PRICE_PER_MILLION }}
       SENTINEL_EXPERT_OUTPUT_PRICE_PER_MILLION: ${{ vars.SENTINEL_EXPERT_OUTPUT_PRICE_PER_MILLION }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Require protected live-evaluation configuration
         shell: bash
         run: |

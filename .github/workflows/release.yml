@@ -17,7 +17,7 @@ jobs:
     name: Validate approved release ref
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -49,7 +49,7 @@ jobs:
     needs: [validate-release-ref]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Scan every Git ref with pinned Gitleaks
@@ -83,7 +83,7 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
@@ -100,7 +100,7 @@ jobs:
     env:
       SENTINEL_DATA_DIR: /tmp/sentinel
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -175,7 +175,7 @@ jobs:
       SENTINEL_EXPERT_INPUT_PRICE_PER_MILLION: ${{ vars.SENTINEL_EXPERT_INPUT_PRICE_PER_MILLION }}
       SENTINEL_EXPERT_OUTPUT_PRICE_PER_MILLION: ${{ vars.SENTINEL_EXPERT_OUTPUT_PRICE_PER_MILLION }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Require protected live-evaluation configuration
         shell: bash
         run: |
