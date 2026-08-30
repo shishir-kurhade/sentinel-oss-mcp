@@ -5,6 +5,12 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # MCP 2 renamed FastMCP and changed the server API. Keep the supported
+      # 1.x line until Sentinel has a deliberate, tested MCP 2 migration.
+      - dependency-name: mcp
+        update-types:
+          - version-update:semver-major
     groups:
       python-development:
         dependency-type: development

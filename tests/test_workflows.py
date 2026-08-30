@@ -45,3 +45,17 @@ def test_job_level_data_directory_does_not_use_runner_context(workflow_name: str
 
     assert "SENTINEL_DATA_DIR: /tmp/sentinel" in workflow
     assert "${{ runner.temp }}" not in workflow
+
+
+def test_unconfigured_live_evaluation_is_manual_only() -> None:
+    workflow = (REPOSITORY_ROOT / ".github" / "workflows" / "nightly-live.yml").read_text()
+
+    assert "workflow_dispatch:" in workflow
+    assert "schedule:" not in workflow
+
+
+def test_dependabot_keeps_mcp_on_supported_major_version() -> None:
+    configuration = (REPOSITORY_ROOT / ".github" / "dependabot.yml").read_text()
+
+    assert "dependency-name: mcp" in configuration
+    assert "version-update:semver-major" in configuration

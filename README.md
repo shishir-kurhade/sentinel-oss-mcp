@@ -272,12 +272,13 @@ the full run cost. The protected release evaluation requires complete classifier
 coverage whenever at least one provider attempt occurred.
 
 Embedding attempts and embedding costs are not included in these classifier metrics. The
-nightly and release evaluation workflows explicitly disable semantic routing so their cost
-scope is unambiguous.
+manual live-evaluation and release workflows explicitly disable semantic routing so their
+cost scope is unambiguous. The recurring nightly schedule remains paused until the protected
+`nightly-live` environment contains its Gemini credential and pricing provenance variables.
 
 No benchmark result is claimed until a versioned report has passed the documented release
-gates. Live Gemini evaluation is isolated to the scheduled/release workflows and is never
-run for pull requests from forks.
+gates. Live Gemini evaluation is isolated to manually dispatched or release workflows and is
+never run for pull requests from forks.
 
 Adversarial prompt generation is a development CLI function, not an MCP tool:
 

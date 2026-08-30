@@ -1,8 +1,8 @@
 name: Nightly live Gemini evaluation
 
 on:
-  schedule:
-    - cron: "17 9 * * *"
+  # Re-enable the schedule only after the nightly-live environment contains
+  # the Gemini credential and all required pricing provenance variables.
   workflow_dispatch:
 
 concurrency:
